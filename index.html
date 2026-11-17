@@ -1,214 +1,104 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<title>Кошачья Судьба</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-:root{
-  --bg1:#fff7ed;
-  --bg2:#fde68a;
-  --card:#ffffffcc;
-  --text:#1f2937;
-  --accent:#f97316;
-  --dark:#0f172a;
-}
-body{
-  margin:0;
-  min-height:100vh;
-  font-family:system-ui, sans-serif;
-  background:linear-gradient(135deg,var(--bg1),var(--bg2));
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition:background .6s,color .6s;
-}
-body.night{
-  background:linear-gradient(135deg,#020617,#1e1b4b);
-  color:#e5e7eb;
-}
-.card{
-  width:100%;
-  max-width:420px;
-  background:var(--card);
-  border-radius:20px;
-  padding:24px;
-  text-align:center;
-  box-shadow:0 20px 50px rgba(0,0,0,.2);
-}
-body.night .card{background:#020617dd}
-h1{margin:0 0 10px}
-.input-wrap{
-  display:flex;
-  justify-content:center;
-}
-input{
-  width:200px;
-  padding:12px;
-  font-size:18px;
-  border-radius:12px;
-  border:2px solid var(--accent);
-  text-align:center;
-}
-input.shake{
-  animation:shake .3s;
-}
-@keyframes shake{
-  0%{transform:translateX(0)}
-  25%{transform:translateX(-6px)}
-  50%{transform:translateX(6px)}
-  75%{transform:translateX(-6px)}
-  100%{transform:translateX(0)}
-}
-
-button{
-  margin-top:12px;
-  padding:10px 18px;
-  border:none;
-  border-radius:12px;
-  background:var(--accent);
-  color:#fff;
-  cursor:pointer;
-  font-weight:600;
-}
-.progress{
-  height:10px;
-  background:#e5e7eb;
-  border-radius:999px;
-  overflow:hidden;
-  margin:16px 0;
-}
-.progress span{
-  display:block;
-  height:100%;
-  width:0%;
-  background:linear-gradient(90deg,#f97316,#fb7185);
-  transition:width .5s;
-}
-.aura{
-  width:140px;
-  height:140px;
-  margin:16px auto;
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:64px;
-  position:relative;
-}
-.aura.god{animation:pulse 1.5s infinite;box-shadow:0 0 40px gold}
-.aura.rare{box-shadow:0 0 30px violet}
-@keyframes pulse{
-  0%{transform:scale(1)}
-  50%{transform:scale(1.08)}
-  100%{transform:scale(1)}
-}
-.hidden{display:none}
-.achievement{
-  font-size:14px;
-  margin-top:6px;
-  color:#16a34a;
-}
-footer{
-  margin-top:12px;
-  font-size:12px;
-  opacity:.7;
-}
-</style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<meta name="description" content="Кошачья Судьба — маленькая игра-гадание: выбери возраст кота, поймай редкую судьбу и пройди девять жизней." />
+<title>Кошачья Судьба — игра</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐈</text></svg>" />
+<link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-<div class="card">
-<h1>🐈 Кошачья Судьба</h1>
-<p>Узнай кем ты стал в мире котов</p>
+<canvas id="fx" aria-hidden="true"></canvas>
 
-<div class="input-wrap">
-  <input id="age" type="number" min="1" max="1000" placeholder="Возраст (1–1000)">
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">🐈</span>
+      <div>
+        <h1>Кошачья Судьба</h1>
+        <p>Выбери возраст — узнай, кем стал кот</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="soundBtn" type="button" title="Звук" aria-pressed="true">🔊</button>
+      <button class="icon-btn" id="themeBtn" type="button" title="Тема">🌗</button>
+    </div>
+  </header>
+
+  <main class="card">
+    <section class="hud" aria-label="Прогресс">
+      <div class="hud-item">
+        <span class="hud-label">Жизни</span>
+        <div class="lives" id="lives"></div>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Мурчание</span>
+        <b class="hud-value" id="score">0</b>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Рекорд</span>
+        <b class="hud-value" id="best">0</b>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Перерождений</span>
+        <b class="hud-value" id="rebirths">0</b>
+      </div>
+    </section>
+
+    <section class="controls" id="controls">
+      <label class="label" for="age">Возраст кота</label>
+      <div class="age-row">
+        <button class="step" type="button" data-step="-10" aria-label="Минус десять">−10</button>
+        <input id="age" type="number" min="1" max="1000" step="1" value="9" inputmode="numeric" autocomplete="off" aria-describedby="ageHint" />
+        <button class="step" type="button" data-step="10" aria-label="Плюс десять">+10</button>
+      </div>
+      <input id="ageRange" class="range" type="range" min="1" max="1000" step="1" value="9" aria-label="Возраст кота, ползунок" />
+      <div class="meta-row" id="ageHint">
+        <span>Кошачьих лет: <b id="catYears">45</b></span>
+        <span id="tierHint">🐾 Мяукающий хаос</span>
+      </div>
+      <div class="risk">
+        <div class="risk-head"><span>Риск рассеяния</span><b id="riskVal">0%</b></div>
+        <div class="risk-track"><span id="riskBar" data-level="safe"></span></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="rollBtn" type="button">Пробудить кота</button>
+        <button class="btn ghost" id="luckyBtn" type="button" title="Случайный возраст" aria-label="Случайный возраст">🎲</button>
+      </div>
+    </section>
+
+    <section class="result" id="result" aria-live="polite" hidden></section>
+
+    <section class="dead" id="dead" hidden>
+      <div class="dead-icon" aria-hidden="true">🕯️</div>
+      <h2>Девять жизней прожиты</h2>
+      <p>Кот ушёл за радужный мост, но у него осталось право на новое воплощение.</p>
+      <p class="dead-note">Перерождение сохранит рекорды, кодекс и достижения. Мурчание за жизнь сбросится, а бонус к очкам вырастет на 10%.</p>
+      <button class="btn primary" id="rebirthBtn" type="button">Переродиться</button>
+    </section>
+  </main>
+
+  <nav class="tabs" aria-label="Разделы">
+    <button class="tab" type="button" data-panel="codex">📖 Кодекс <span class="pill" id="codexBadge">0/12</span></button>
+    <button class="tab" type="button" data-panel="records">🏆 Рекорды</button>
+    <button class="tab" type="button" data-panel="rules">❔ Правила</button>
+  </nav>
+
+  <footer class="foot">Всё происходящее — шутка. Коты не пострадали.</footer>
 </div>
 
-<button onclick="calc()">Пробудить кота</button>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
-<div class="progress"><span id="bar"></span></div>
+<dialog class="panel" id="panel">
+  <div class="panel-head">
+    <h2 id="panelTitle">Раздел</h2>
+    <button class="icon-btn" type="button" id="panelClose" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+</dialog>
 
-<div id="cat" class="aura hidden">🐱</div>
-<p id="text"></p>
-<p id="fate"></p>
-
-<div id="ach" class="achievement hidden"></div>
-
-<button id="rebirth" class="hidden" onclick="rebirth()">Переродиться</button>
-
-<footer>⚠ Всё происходящее — шутка</footer>
-</div>
-
-<script>
-const texts=[
-{l:20,t:"Мяукающий хаос 🐾"},
-{l:50,t:"Кот-исследователь диванов 😼"},
-{l:100,t:"Серый кардинал кухни 😺"},
-{l:200,t:"Хранитель подоконника 🪟"},
-{l:400,t:"Повелитель коробок 📦"},
-{l:600,t:"Мифический кот-отшельник 🌫"},
-{l:800,t:"Космический кот наблюдатель 🌌"},
-{l:1000,t:"Абсолютный кошачий архонт 🐈‍⬛"}
-];
-
-const fates=[
-"Бродячий философ",
-"Храмовый хранитель",
-"Кибер-кот будущего",
-"Кот-шпион",
-"Кот-алхимик",
-"Хроно-кот",
-"Кот-император"
-];
-
-function calc(){
-  const input=document.getElementById('age');
-  let age=+input.value;
-  if(!age||age>1000){
-    input.classList.add('shake');
-    setTimeout(()=>input.classList.remove('shake'),300);
-    return;
-  }
-
-  document.body.classList.toggle('night',age>500);
-
-  const catAge=age*5;
-  document.getElementById('bar').style.width=Math.min(catAge/50,100)+'%';
-
-  let text=texts.find(x=>catAge<x.l*5)?.t||texts.at(-1).t;
-  document.getElementById('text').textContent=text;
-
-  document.getElementById('fate').textContent=
-    "Судьба: "+fates[Math.floor(Math.random()*fates.length)];
-
-  const cat=document.getElementById('cat');
-  cat.className="aura";
-  cat.textContent=["🐱","😺","😼","🐈","🐈‍⬛"][Math.floor(Math.random()*5)];
-  if(catAge>3000)cat.classList.add("god");
-  if(Math.random()<0.05)cat.classList.add("rare");
-  cat.classList.remove("hidden");
-
-  checkAch(age);
-  document.getElementById('rebirth').classList.remove('hidden');
-}
-
-function checkAch(age){
-  const a=document.getElementById('ach');
-  a.classList.remove('hidden');
-  if([42,404,666,777].includes(age)){
-    a.textContent="🏆 Секретное достижение разблокировано!";
-  }else{
-    a.textContent="";
-  }
-}
-
-function rebirth(){
-  localStorage.clear();
-  location.reload();
-}
-</script>
+<script src="game.js"></script>
 </body>
 </html>
