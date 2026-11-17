@@ -3,43 +3,13 @@
 
   /* ======================= Данные ======================= */
   const KEY = 'cat_fate_v2';
-  const MAX_LIVES = 9;
-  const RISK_START = 350;
-  const RISK_MAX = 0.55;
+  const {
+    MAX_AGE, MAX_LIVES, RISK_START, RISK_MAX, COMBO_STEP, COMBO_MAX, CODEX_STEP, SECRET_MULT, SECRET_AGES,
+    TIERS, RARITIES, RARITY_ORDER, FATES, tierIndexFor, riskFor, rebirthMult, comboBonus, comboMult,
+    codexMult, fateById, rollRarity, checkRarity, computeGain
+  } = CAT_FATE_LOGIC;
 
-  const TIERS = [
-    { min: 1,   name: 'Мяукающий хаос',               icon: '🐾', mult: 1.0  },
-    { min: 20,  name: 'Кот-исследователь диванов',    icon: '😼', mult: 1.25 },
-    { min: 50,  name: 'Серый кардинал кухни',         icon: '😺', mult: 1.55 },
-    { min: 100, name: 'Хранитель подоконника',        icon: '🪟', mult: 1.9  },
-    { min: 200, name: 'Повелитель коробок',           icon: '📦', mult: 2.35 },
-    { min: 400, name: 'Мифический кот-отшельник',     icon: '🌫️', mult: 2.9  },
-    { min: 600, name: 'Космический кот-наблюдатель',  icon: '🌌', mult: 3.6  },
-    { min: 800, name: 'Абсолютный кошачий архонт',    icon: '🐈‍⬛', mult: 4.5 }
-  ];
-
-  const RARITIES = {
-    common:    { label: 'Обычная',     mult: 1.0, weight: 58, cls: 'r-common' },
-    rare:      { label: 'Редкая',      mult: 1.6, weight: 27, cls: 'r-rare' },
-    epic:      { label: 'Эпическая',   mult: 2.6, weight: 12, cls: 'r-epic' },
-    legendary: { label: 'Легендарная', mult: 4.5, weight: 3,  cls: 'r-legendary' }
-  };
-  const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary'];
-
-  const FATES = [
-    { id: 'wanderer', icon: '🚶', name: 'Бродячий философ',            rar: 'common' },
-    { id: 'temple',   icon: '⛩️', name: 'Храмовый хранитель',          rar: 'common' },
-    { id: 'baker',    icon: '🥐', name: 'Кот-пекарь',                  rar: 'common' },
-    { id: 'bard',     icon: '🎻', name: 'Кот-бард',                    rar: 'common' },
-    { id: 'cyber',    icon: '🤖', name: 'Кибер-кот будущего',          rar: 'rare'   },
-    { id: 'spy',      icon: '🕵️', name: 'Кот-шпион',                   rar: 'rare'   },
-    { id: 'astro',    icon: '🚀', name: 'Кот-космонавт',               rar: 'rare'   },
-    { id: 'alchemy',  icon: '⚗️', name: 'Кот-алхимик',                 rar: 'epic'   },
-    { id: 'chrono',   icon: '⏳', name: 'Хроно-кот',                   rar: 'epic'   },
-    { id: 'judge',    icon: '⚖️', name: 'Кот-судья девяти жизней',     rar: 'epic'   },
-    { id: 'emperor',  icon: '👑', name: 'Кот-император',               rar: 'legendary' },
-    { id: 'void',     icon: '🕳️', name: 'Кот из пустоты',              rar: 'legendary' }
-  ];
+  // судьбы, редкости и тиры вынесены в logic.js (CAT_FATE_LOGIC)
 
   const ACHS = [
     { id: 'first',   icon: '🐾', name: 'Первое пробуждение', desc: 'Сделай первый бросок возраста.',        check: s => s.rolls >= 1 },
@@ -52,10 +22,7 @@
     { id: 'reborn',  icon: '🔄', name: 'Новая жизнь',        desc: 'Переродись хотя бы раз.',               check: s => s.rebirth >= 1 },
     { id: 'rich',    icon: '💰', name: 'Мурчание в ушах',    desc: 'Набери 10 000 мурчания за жизнь.',      check: s => s.bestScore >= 10000 },
     { id: 'age42',   icon: '🌌', name: 'Ответ на всё',       desc: 'Брось возраст 42.',                     check: (s, c) => c.age === 42 },
-    { id: 'age404',  icon: '🛸', name: 'Кот не найден',      desc: 'Брось возраст 404.',                    check: (s, c) => c.age === 404 },
-    { id: 'age666',  icon: '😈', name: 'Демонический мур',   desc: 'Брось возраст 666.',                    check: (s, c) => c.age === 666 },
-    { id: 'age777',  icon: '🎰', name: 'Джекпот',            desc: 'Брось возраст 777.',                    check: (s, c) => c.age === 777 },
-    { id: 'age1000', icon: '🏔️', name: 'Абсолют',            desc: 'Брось 1000 и выживи.',                  check: (s, c) => c.success && c.age >= 1000 }
+    { id: 'age110',  icon: '🏔️', name: 'Абсолют',            desc: 'Брось 110 и выживи.',                   check: (s, c) => c.success && c.age >= MAX_AGE }
   ];
 
   /* ======================= Утилиты ======================= */
@@ -66,23 +33,14 @@
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  function tierIndexFor(age) {
-    let idx = 0;
-    for (let i = 0; i < TIERS.length; i++) if (age >= TIERS[i].min) idx = i;
-    return idx;
-  }
-  function riskFor(age) {
-    if (age <= RISK_START) return 0;
-    return Math.min(RISK_MAX, ((age - RISK_START) / (1000 - RISK_START)) * RISK_MAX);
-  }
-  function rebirthMult() { return 1 + state.rebirth * 0.1; }
-
   /* ======================= Состояние ======================= */
   function defaults() {
     return {
       lives: MAX_LIVES, rebirth: 0, score: 0, bestScore: 0, bestAge: 0,
       rolls: 0, successes: 0, streak: 0, bestStreak: 0,
-      unlocked: [], achievements: [], sound: true, theme: 'auto'
+      total: 0, bestGain: 0, bestFateId: null,
+      runRolls: 0, runSuccesses: 0, runBestStreak: 0, runBestGain: 0, runBestFateId: null,
+      unlocked: [], achievements: [], sound: true, theme: 'auto', legendaryMisses: 0, forceRarity: null, soundVolume: 0.16
     };
   }
 
@@ -90,6 +48,12 @@
     const base = defaults();
     let raw = null;
     try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { raw = null; }
+    if (!raw || typeof raw !== 'object') {
+      // миграция: читаем данные из устаревшего ключа, если актуального нет
+      let legacy = null;
+      try { legacy = JSON.parse(localStorage.getItem('cat_fate_v1') || localStorage.getItem('cat_fate') || 'null'); } catch (e) { legacy = null; }
+      if (legacy && typeof legacy === 'object') raw = legacy;
+    }
     if (!raw || typeof raw !== 'object') return base;
 
     const s = Object.assign(base, raw);
@@ -97,13 +61,24 @@
     s.rebirth = Math.max(0, Math.round(Number(s.rebirth) || 0));
     s.score = Math.max(0, Math.round(Number(s.score) || 0));
     s.bestScore = Math.max(0, Math.round(Number(s.bestScore) || 0));
-    s.bestAge = clamp(Math.round(Number(s.bestAge) || 0), 0, 1000);
+    s.bestAge = clamp(Math.round(Number(s.bestAge) || 0), 0, MAX_AGE);
     s.rolls = Math.max(0, Math.round(Number(s.rolls) || 0));
     s.successes = Math.max(0, Math.round(Number(s.successes) || 0));
     s.streak = Math.max(0, Math.round(Number(s.streak) || 0));
     s.bestStreak = Math.max(s.streak, Math.round(Number(s.bestStreak) || 0));
+    s.total = Math.max(0, Math.round(Number(s.total) || 0));
+    s.bestGain = Math.max(0, Math.round(Number(s.bestGain) || 0));
+    s.bestFateId = FATES.some(f => f.id === raw.bestFateId) ? raw.bestFateId : null;
+    s.runRolls = Math.max(0, Math.round(Number(s.runRolls) || 0));
+    s.runSuccesses = Math.max(0, Math.round(Number(s.runSuccesses) || 0));
+    s.runBestStreak = Math.max(0, Math.round(Number(s.runBestStreak) || 0));
+    s.runBestGain = Math.max(0, Math.round(Number(s.runBestGain) || 0));
+    s.runBestFateId = FATES.some(f => f.id === raw.runBestFateId) ? raw.runBestFateId : null;
     s.sound = raw.sound !== false;
-    s.theme = ['auto', 'light', 'dark'].indexOf(raw.theme) >= 0 ? raw.theme : 'auto';
+    s.theme = ['auto', 'light', 'dark', 'midnight'].indexOf(raw.theme) >= 0 ? raw.theme : 'auto';
+    s.soundVolume = clamp(Number(s.soundVolume) || 0.16, 0, 1);
+    s.legendaryMisses = Math.max(0, Math.round(Number(s.legendaryMisses) || 0));
+    s.forceRarity = ['common', 'rare', 'epic', 'legendary'].indexOf(s.forceRarity) >= 0 ? s.forceRarity : null;
     s.unlocked = Array.isArray(raw.unlocked)
       ? raw.unlocked.filter((id, i, a) => a.indexOf(id) === i && FATES.some(f => f.id === id))
       : [];
@@ -111,12 +86,14 @@
       ? raw.achievements.filter((id, i, a) => a.indexOf(id) === i && ACHS.some(x => x.id === id))
       : [];
     if (s.bestScore < s.score) s.bestScore = s.score;
+    if (!s.bestGain) s.bestFateId = null;
+    if (!s.runBestGain) s.runBestFateId = null;
     return s;
   }
 
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
-    catch (e) { toast('⚠️', 'Не удалось сохранить прогресс'); }
+    catch (e) { toast('⚠️', 'Не удалось сохранить прогресс', 'err'); }
   }
 
   let state = loadState();
@@ -129,7 +106,8 @@
     controls: $('controls'), result: $('result'), dead: $('dead'),
     rollBtn: $('rollBtn'), luckyBtn: $('luckyBtn'), rebirthBtn: $('rebirthBtn'),
     soundBtn: $('soundBtn'), themeBtn: $('themeBtn'),
-    codexBadge: $('codexBadge'), toasts: $('toasts'),
+    codexBadge: $('codexBadge'), streak: $('streak'), toasts: $('toasts'),
+    runSummary: $('runSummary'),
     panel: $('panel'), panelTitle: $('panelTitle'), panelBody: $('panelBody'), panelClose: $('panelClose')
   };
 
@@ -144,7 +122,7 @@
       if (!ctx) {
         ctx = new AC();
         master = ctx.createGain();
-        master.gain.value = 0.16;
+        master.gain.value = Number(state.soundVolume) || 0.16;
         master.connect(ctx.destination);
       }
       if (ctx.state === 'suspended') ctx.resume();
@@ -183,7 +161,8 @@
       legendary() { [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98].forEach((f, i) => tone(f, 0.3, 'triangle', i * 0.09, 0.6)); },
       fail() { tone(220, 0.18, 'sawtooth', 0, 0.35); tone(150, 0.3, 'sine', 0.07, 0.45); },
       ach() { [880, 1174.66, 1567.98].forEach((f, i) => tone(f, 0.16, 'sine', i * 0.06, 0.45)); },
-      dead() { [392, 329.63, 261.63, 196].forEach((f, i) => tone(f, 0.34, 'sine', i * 0.12, 0.5)); }
+      dead() { [392, 329.63, 261.63, 196].forEach((f, i) => tone(f, 0.34, 'sine', i * 0.12, 0.5)); },
+      level() { [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.06, 0.5)); }
     };
   })();
 
@@ -255,9 +234,9 @@
   })();
 
   /* ======================= Тосты ======================= */
-  function toast(icon, text) {
+  function toast(icon, text, type) {
     const node = document.createElement('div');
-    node.className = 'toast';
+    node.className = 'toast' + (type ? ' ' + type : '');
     node.innerHTML = '<span aria-hidden="true">' + icon + '</span><span>' + escapeHtml(text) + '</span>';
     el.toasts.appendChild(node);
     while (el.toasts.children.length > 3) el.toasts.firstElementChild.remove();
@@ -271,15 +250,15 @@
   function currentAge() {
     const n = Number(el.age.value);
     const v = Number.isFinite(n) && n > 0 ? Math.round(n) : 1;
-    return clamp(v, 1, 1000);
+    return clamp(v, 1, MAX_AGE);
   }
 
   function applyTheme() {
     const age = currentAge();
-    const resolved = state.theme === 'auto' ? (age > 500 ? 'dark' : 'light') : state.theme;
+    const resolved = state.theme === 'auto' ? (age > 80 ? 'dark' : 'light') : state.theme;
     document.documentElement.dataset.theme = resolved;
-    el.themeBtn.textContent = state.theme === 'auto' ? '🌗' : state.theme === 'dark' ? '🌙' : '☀️';
-    const title = 'Тема: ' + (state.theme === 'auto' ? 'авто (по возрасту)' : state.theme === 'dark' ? 'ночь' : 'день');
+    el.themeBtn.textContent = state.theme === 'auto' ? '🌗' : state.theme === 'dark' ? '🌙' : state.theme === 'light' ? '☀️' : '🌃';
+    const title = 'Тема: ' + (state.theme === 'auto' ? 'авто (по возрасту)' : state.theme === 'dark' ? 'ночь' : state.theme === 'light' ? 'день' : 'полночь');
     el.themeBtn.title = title;
     el.themeBtn.setAttribute('aria-label', title);
   }
@@ -297,7 +276,7 @@
   }
 
   function setAge(value) {
-    const age = clamp(Math.round(Number(value) || 1), 1, 1000);
+    const age = clamp(Math.round(Number(value) || 1), 1, MAX_AGE);
     el.age.value = age;
     el.range.value = age;
     renderHints();
@@ -308,7 +287,7 @@
     const raw = String(el.age.value).trim();
     if (!raw) return null;
     const n = Number(raw);
-    if (!Number.isFinite(n) || n < 1 || n > 1000) return null;
+    if (!Number.isFinite(n) || n < 1 || n > MAX_AGE) return null;
     return Math.round(n);
   }
 
@@ -323,6 +302,11 @@
     el.score.textContent = fmt(state.score);
     el.best.textContent = fmt(state.bestScore);
     el.rebirths.textContent = state.rebirth;
+    const combo = Math.round(comboBonus(state.streak) * 100);
+    el.streak.textContent = state.streak ? state.streak + ' · +' + combo + '%' : '0';
+    el.streak.title = state.streak
+      ? 'Серия успехов: ' + state.streak + ' подряд, бонус +' + combo + '% к мурчанию'
+      : 'Успешные броски подряд дают бонус к мурчанию';
   }
 
   function renderBadges() {
@@ -345,15 +329,6 @@
   }
 
   /* ======================= Бросок ======================= */
-  function rollRarity() {
-    const total = RARITY_ORDER.reduce((sum, k) => sum + RARITIES[k].weight, 0);
-    let r = Math.random() * total;
-    for (const k of RARITY_ORDER) {
-      r -= RARITIES[k].weight;
-      if (r <= 0) return k;
-    }
-    return 'common';
-  }
 
   function chip(text) {
     return '<span class="chip">' + escapeHtml(text) + '</span>';
@@ -375,8 +350,9 @@
         '<p class="roll-score">0 мурчания</p>' +
         '<div class="breakdown">' +
           chip('возраст ' + r.age) +
-          chip('тир: ' + r.tier.name) +
+          chip('тир ×' + r.tier.mult) +
           chip('шанс провала ' + Math.round(r.risk * 100) + '%') +
+          (r.prevStreak ? chip('серия ' + r.prevStreak + ' сброшена') : '') +
         '</div>';
       return;
     }
@@ -392,8 +368,11 @@
         chip('возраст ' + r.age) +
         chip('тир ×' + r.tier.mult) +
         chip('редкость ×' + rar.mult) +
+        (r.secret ? chip('секрет ×' + SECRET_MULT) : '') +
         (r.crit ? chip('крит ×2') : '') +
-        (state.rebirth ? chip('перерождение ×' + rebirthMult().toFixed(1)) : '') +
+        (r.combo > 1 ? chip('серия +' + Math.round((r.combo - 1) * 100) + '%') : '') +
+        (r.codex > 1 ? chip('кодекс +' + Math.round((r.codex - 1) * 100) + '%') : '') +
+        (state.rebirth ? chip('перерождение ×' + rebirthMult(state.rebirth).toFixed(1)) : '') +
       '</div>';
   }
 
@@ -407,12 +386,12 @@
 
   function roll() {
     if (busy) return;
-    if (state.lives <= 0) { toast('🕯️', 'Жизни закончились — переродись'); return; }
+    if (state.lives <= 0) { toast('🕯️', 'Жизни закончились — переродись', 'info'); return; }
 
     const age = readAge();
     if (age === null) {
       shake();
-      toast('⚠️', 'Возраст должен быть от 1 до 1000');
+      toast('⚠️', 'Возраст должен быть от 1 до ' + MAX_AGE, 'err');
       Sfx.fail();
       return;
     }
@@ -429,24 +408,44 @@
     let fate = null;
     let crit = false;
     let gained = 0;
+    let combo = 1;
+    let codex = 1;
+    let secret = false;
+    const prevStreak = state.streak;
 
     if (success) {
-      rarity = rollRarity();
+      rarity = checkRarity(state, true);
       const pool = FATES.filter(f => f.rar === rarity);
       fate = pool.length ? pick(pool) : pick(FATES);
       crit = Math.random() < 0.1;
-      gained = Math.round(age * tier.mult * RARITIES[rarity].mult * (crit ? 2 : 1) * rebirthMult());
-      state.score += gained;
-      state.successes++;
+      secret = SECRET_AGES.has(age);
       state.streak++;
+      combo = comboMult(state.streak);
+      codex = codexMult(state.unlocked.length);
+      gained = computeGain({ age: age, tierMult: tier.mult, rarityMult: RARITIES[rarity].mult, crit: crit, secret: secret, combo: combo, codex: codex, rebirth: rebirthMult(state.rebirth) });
+      state.score += gained;
+      state.total += gained;
+      state.successes++;
+      state.runSuccesses++;
       state.bestStreak = Math.max(state.bestStreak, state.streak);
+      state.runBestStreak = Math.max(state.runBestStreak, state.streak);
       state.bestAge = Math.max(state.bestAge, age);
+      if (gained > state.bestGain) {
+        state.bestGain = gained;
+        state.bestFateId = fate.id;
+        Sfx.level();
+      }
+      if (gained > state.runBestGain) {
+        state.runBestGain = gained;
+        state.runBestFateId = fate.id;
+      }
       if (state.unlocked.indexOf(fate.id) < 0) state.unlocked.push(fate.id);
     } else {
       state.streak = 0;
     }
 
     state.rolls++;
+    state.runRolls++;
     state.lives = Math.max(0, state.lives - 1);
     state.bestScore = Math.max(state.bestScore, state.score);
 
@@ -455,7 +454,7 @@
 
     save();
     renderHud();
-    renderResult({ age: age, ti: ti, tier: tier, success: success, rarity: rarity, fate: fate, crit: crit, gained: gained, risk: risk });
+    renderResult({ age: age, ti: ti, tier: tier, success: success, rarity: rarity, fate: fate, crit: crit, gained: gained, risk: risk, secret: secret, combo: combo, codex: codex, prevStreak: prevStreak });
     renderBadges();
 
     if (!success) Sfx.fail();
@@ -475,7 +474,7 @@
 
     fresh.forEach((a, i) => {
       setTimeout(() => {
-        toast(a.icon, 'Достижение: ' + a.name);
+        toast(a.icon, 'Достижение: ' + a.name, 'ok');
         Sfx.ach();
       }, 320 + i * 520);
     });
@@ -491,10 +490,26 @@
   }
 
   /* ======================= Конец игры и перерождение ======================= */
+  function renderRunSummary() {
+    const best = fateById(state.runBestFateId);
+    const bestText = state.runBestGain
+      ? '+' + fmt(state.runBestGain) + (best ? ' · ' + best.icon + ' ' + escapeHtml(best.name) : '')
+      : '—';
+    const rows = [
+      ['Мурчание за забег', fmt(state.score)],
+      ['Успешных пробуждений', fmt(state.runSuccesses) + ' из ' + fmt(state.runRolls)],
+      ['Лучшая серия', fmt(state.runBestStreak)],
+      ['Лучший бросок', bestText]
+    ];
+    el.runSummary.innerHTML = '<div class="rec-list">' + rows.map(function (r) {
+      return '<div class="rec"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>';
+    }).join('') + '</div>';
+  }
+
   function showDead() {
+    renderRunSummary();
     el.dead.hidden = false;
     el.controls.hidden = true;
-    el.result.hidden = true;
     el.dead.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
@@ -508,6 +523,13 @@
     state.lives = MAX_LIVES;
     state.score = 0;
     state.streak = 0;
+    state.runRolls = 0;
+    state.runSuccesses = 0;
+    state.runBestStreak = 0;
+    state.runBestGain = 0;
+    state.runBestFateId = null;
+    state.legendaryMisses = 0;
+    state.forceRarity = null;
 
     const fresh = checkAchievements({ age: 0, success: false, crit: false, rarity: null, fateId: null, gained: 0 });
 
@@ -517,11 +539,11 @@
     renderBadges();
     el.result.hidden = true;
     el.result.innerHTML = '';
-    toast('🔄', 'Перерождение №' + state.rebirth + ': девять жизней снова с тобой');
+    toast('🔄', 'Перерождение №' + state.rebirth + ': девять жизней снова с тобой', 'ok');
     Sfx.legendary();
     fresh.forEach((a, i) => {
       setTimeout(() => {
-        toast(a.icon, 'Достижение: ' + a.name);
+        toast(a.icon, 'Достижение: ' + a.name, 'ok');
         Sfx.ach();
       }, 420 + i * 520);
     });
@@ -542,13 +564,21 @@
 
     return '<p class="panel-text">Открыто ' + state.unlocked.length + ' из ' + FATES.length +
       '. Каждая судьба выпадает случайно: редкость влияет на мурчание, а легендарные встречаются реже всех.</p>' +
+      '<p class="panel-text">Бонус кодекса: <b>+' + Math.round(state.unlocked.length * CODEX_STEP * 100) +
+      '%</b> к мурчанию (по +1% за каждую открытую судьбу, максимум +' + Math.round(FATES.length * CODEX_STEP * 100) + '%).</p>' +
       '<div class="codex">' + cards + '</div>';
   }
 
   function recordsHtml() {
+    const best = fateById(state.bestFateId);
+    const bestText = state.bestGain
+      ? '+' + fmt(state.bestGain) + (best ? ' · ' + best.icon + ' ' + escapeHtml(best.name) : '')
+      : '—';
     const rows = [
-      ['Лучший результат за жизнь', fmt(state.bestScore)],
+      ['Лучший забег', fmt(state.bestScore)],
       ['Мурчание сейчас', fmt(state.score)],
+      ['Всего мурчания', fmt(state.total)],
+      ['Лучший бросок', bestText],
       ['Лучший возраст', state.bestAge ? fmt(state.bestAge) : '—'],
       ['Успешных пробуждений', fmt(state.successes) + ' из ' + fmt(state.rolls)],
       ['Лучшая серия', fmt(state.bestStreak)],
@@ -574,15 +604,19 @@
   function rulesHtml() {
     return '<p class="panel-text"><b>Цель</b> — прожить девять жизней и выжать максимум мурчания, не потеряв кота.</p>' +
       '<div class="rec-list">' +
-        '<div class="rec"><span>1. Возраст</span><b>1–1000</b></div>' +
+        '<div class="rec"><span>1. Возраст</span><b>1–' + MAX_AGE + '</b></div>' +
         '<div class="rec"><span>2. Жизней на попытки</span><b>9</b></div>' +
-        '<div class="rec"><span>3. Риск рассеяния</span><b>от 350 лет</b></div>' +
+        '<div class="rec"><span>3. Риск рассеяния</span><b>от 60 лет</b></div>' +
         '<div class="rec"><span>4. Крит</span><b>10% ×2</b></div>' +
-        '<div class="rec"><span>5. Бонус за перерождение</span><b>+10%</b></div>' +
+        '<div class="rec"><span>5. Серия успехов</span><b>+10% до +50%</b></div>' +
+        '<div class="rec"><span>6. Бонус кодекса</span><b>+1% за судьбу</b></div>' +
+        '<div class="rec"><span>7. Бонус за перерождение</span><b>+10%</b></div>' +
       '</div>' +
-      '<p class="panel-text" style="margin-top:12px">Чем старше кот, тем выше тир и множитель, но с 350 лет появляется шанс, что кот рассеяется: жизнь сгорит без награды. Оптимум по ожиданию — примерно 760–800 лет.</p>' +
+      '<p class="panel-text" style="margin-top:12px">Чем старше кот, тем выше тир и множитель, но с 60 лет появляется шанс, что кот рассеивается: жизнь сгорит без награды. Оптимум по ожиданию — примерно 60–80 лет.</p>' +
+      '<p class="panel-text">Серия: каждый успешный бросок подряд добавляет +10% к мурчанию (до +50%), а провал обнуляет серию. Каждая открытая судьба даёт +1% к мурчанию навсегда (до +12%).</p>' +
       '<p class="panel-text">Редкости: обычная ×1 (58%), редкая ×1.6 (27%), эпическая ×2.6 (12%), легендарная ×4.5 (3%).</p>' +
-      '<p class="panel-text">Секретные возраста: <b>42, 404, 666, 777, 1000</b>. Прогресс хранится в браузере, звук синтезируется на месте — внешних файлов нет.</p>';
+      '<p class="panel-text">Pity: после 5 успешных не-легендарных попаданий гарантируется легендарная судьба.</p>' +
+      '<p class="panel-text">Секретные возрасты <b>42</b> дают ×1.5 к мурчанию. Прогресс хранится в браузере, звук синтезируется на месте — внешних файлов нет.</p>';
   }
 
   function openPanel(kind) {
@@ -616,7 +650,7 @@
     renderHints();
     applyTheme();
     closePanel();
-    toast('🧹', 'Прогресс сброшен — начинаем с девяти жизней');
+    toast('🧹', 'Прогресс сброшен — начинаем с девяти жизней', 'info');
   }
 
   /* ======================= События ======================= */
@@ -633,11 +667,15 @@
   el.age.addEventListener('input', function () {
     const raw = el.age.value;
     if (raw === '') return;
-    el.range.value = clamp(Math.round(Number(raw) || 1), 1, 1000);
+    el.range.value = clamp(Math.round(Number(raw) || 1), 1, MAX_AGE);
     renderHints();
     applyTheme();
   });
-  el.age.addEventListener('blur', function () { setAge(el.age.value); });
+  el.age.addEventListener('blur', function () {
+    const raw = el.age.value;
+    if (raw === null || raw === '') return;
+    setAge(raw);
+  });
   el.age.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -660,8 +698,9 @@
   });
 
   el.luckyBtn.addEventListener('click', function () {
-    setAge(randInt(1, 1000));
+    setAge(randInt(1, MAX_AGE));
     Sfx.click();
+    roll();
   });
 
   el.rollBtn.addEventListener('click', roll);
@@ -672,7 +711,7 @@
     save();
     renderSound();
     if (state.sound) { Sfx.unlock(); Sfx.click(); }
-    toast(state.sound ? '🔊' : '🔇', state.sound ? 'Звук включён' : 'Звук выключен');
+    toast(state.sound ? '🔊' : '🔇', state.sound ? 'Звук включён' : 'Звук выключен', 'info');
   });
 
   function renderSound() {
@@ -682,7 +721,7 @@
   }
 
   el.themeBtn.addEventListener('click', function () {
-    state.theme = state.theme === 'auto' ? 'light' : state.theme === 'light' ? 'dark' : 'auto';
+    state.theme = state.theme === 'auto' ? 'light' : state.theme === 'light' ? 'dark' : state.theme === 'dark' ? 'midnight' : 'auto';
     save();
     applyTheme();
     Sfx.click();
@@ -698,6 +737,9 @@
   el.panelClose.addEventListener('click', closePanel);
   el.panel.addEventListener('click', function (e) {
     if (e.target === el.panel) closePanel();
+  });
+  el.panel.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closePanel();
   });
 
   el.panelBody.addEventListener('click', function (e) {

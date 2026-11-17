@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light dark" />
-<meta name="description" content="Кошачья Судьба — маленькая игра-гадание: выбери возраст кота, поймай редкую судьбу и пройди девять жизней." />
+<meta name="description" content="Кошачья Судьба — маленькая игра-гадание: выбери возраст кота, собери комбо, поймай редкую судьбу и пройди девять жизней." />
 <title>Кошачья Судьба — игра</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐈</text></svg>" />
 <link rel="stylesheet" href="style.css" />
@@ -38,6 +38,10 @@
         <b class="hud-value" id="score">0</b>
       </div>
       <div class="hud-item">
+        <span class="hud-label">Серия</span>
+        <b class="hud-value" id="streak">0</b>
+      </div>
+      <div class="hud-item">
         <span class="hud-label">Рекорд</span>
         <b class="hud-value" id="best">0</b>
       </div>
@@ -51,10 +55,10 @@
       <label class="label" for="age">Возраст кота</label>
       <div class="age-row">
         <button class="step" type="button" data-step="-10" aria-label="Минус десять">−10</button>
-        <input id="age" type="number" min="1" max="1000" step="1" value="9" inputmode="numeric" autocomplete="off" aria-describedby="ageHint" />
+        <input id="age" type="number" min="1" max="110" step="1" value="9" inputmode="numeric" autocomplete="off" aria-describedby="ageHint" />
         <button class="step" type="button" data-step="10" aria-label="Плюс десять">+10</button>
       </div>
-      <input id="ageRange" class="range" type="range" min="1" max="1000" step="1" value="9" aria-label="Возраст кота, ползунок" />
+      <input id="ageRange" class="range" type="range" min="1" max="110" step="1" value="9" aria-label="Возраст кота, ползунок" />
       <div class="meta-row" id="ageHint">
         <span>Кошачьих лет: <b id="catYears">45</b></span>
         <span id="tierHint">🐾 Мяукающий хаос</span>
@@ -75,6 +79,7 @@
       <div class="dead-icon" aria-hidden="true">🕯️</div>
       <h2>Девять жизней прожиты</h2>
       <p>Кот ушёл за радужный мост, но у него осталось право на новое воплощение.</p>
+      <div class="run-summary" id="runSummary"></div>
       <p class="dead-note">Перерождение сохранит рекорды, кодекс и достижения. Мурчание за жизнь сбросится, а бонус к очкам вырастет на 10%.</p>
       <button class="btn primary" id="rebirthBtn" type="button">Переродиться</button>
     </section>
@@ -91,7 +96,7 @@
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<dialog class="panel" id="panel">
+<dialog class="panel" id="panel" aria-labelledby="panelTitle">
   <div class="panel-head">
     <h2 id="panelTitle">Раздел</h2>
     <button class="icon-btn" type="button" id="panelClose" aria-label="Закрыть">✕</button>
@@ -99,6 +104,7 @@
   <div class="panel-body" id="panelBody"></div>
 </dialog>
 
+<script src="logic.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
